@@ -1,0 +1,100 @@
+module STLC where
+
+data Type = A | B | C | Fun Type Type
+  deriving Eq
+
+-- data Term = Var Int
+--           | Lam Type Term
+--           | App Term Term
+
+-- type TypeChecker = [Type] -> Maybe Type
+
+-- typecheck :: Term -> TypeChecker
+-- typecheck (Var' i)       = var i
+-- typecheck (Lam' ty tm)   = lam ty (typecheck tm)
+-- typecheck (App' tm1 tm2) = app (typecheck tm1) (typecheck tm2)
+
+-- var :: Int -> TypeChecker
+-- var i ctx = Just (ctx !! i)
+
+-- lam :: Type -> TypeChecker -> TypeChecker
+-- lam ty tc ctx = case tc (ty : ctx) of
+--                   Just ty' -> Just (Fun ty ty')
+--                   Nothing  -> Nothing
+
+-- app :: TypeChecker -> TypeChecker -> TypeChecker
+-- app tc1 tc2 ctx = case (tc1 ctx, tc2 ctx) of
+--                     (Just (Fun ty1 ty2), Just ty'1) | ty1 == ty'1 -> Just ty2
+--                     _ -> Nothing
+
+-- failure :: TypeChecker
+-- failure _ = Nothing
+
+-- have :: Int -> Type -> TypeChecker -> TypeChecker
+-- have i ty tc ctx
+--   | ctx !! i == ty = tc ctx
+--   | otherwise      = Nothing
+
+-- hasType :: Type -> TypeChecker -> TypeChecker
+-- hasType ty tc ctx = case tc ctx of
+--                       Just ty' | ty == ty' -> Just ty
+--                       _ -> Nothing
+
+class Typechecker a where
+  var :: Int -> a
+  lam :: Type -> a -> a
+  app :: a -> a -> a
+  have :: Int -> Type -> a -> a
+  hasType :: Type -> a -> a
+  failure :: a
+
+data TCTerm v a = Return a
+                | Var v
+                | Lam Type (TCTerm v a)
+                | App (TCTerm v a) (TCTerm v a)
+                | Have Int Type (TCTerm v a)
+                | HasType Type (TCTerm v a)
+                | Failure
+
+instance Functor (TCTerm v) where
+  fmap f (Return a)     = Return $ f a
+  fmap _ (Var i)        = Var i
+  fmap f (Lam ty t)     = Lam ty (fmap f t)
+  fmap f (App t1 t2)    = App (fmap f t1) (fmap f t2)
+  fmap f (Have i ty t)  = Have i ty (fmap f t)
+  fmap f (HasType ty t) = HasType ty (fmap f t)
+  fmap _ Failure        = Failure
+
+instance Applicative (TCTerm v) where
+  pure x = Return x
+  Return f     <*> a = fmap f a
+  Var i        <*> _ = Var i
+  Lam ty f     <*> a = Lam ty (f <*> a)
+  App t1 t2    <*> a = App (t1 <*> a) (t2 <*> a)
+  Have i ty t  <*> a = Have i ty (t <*> a)
+  HasType ty t <*> f = HasType ty (t <*> f)
+  Failure      <*> _ = Failure
+
+instance Monad (TCTerm v) where
+  Return a     >>= f = f a
+  Var i        >>= _ = Var i
+  Lam ty t     >>= f = Lam ty (t >>= f)
+  App t1 t2    >>= f = App (t1 >>= f) (t2 >>= f)
+  Have i ty t  >>= f = Have i ty (t >>= f)
+  HasType ty t >>= f = HasType ty (t >>= f)
+  Failure      >>= _ = Failure
+
+assumption :: v -> TCTerm v a
+assumption v = Var v
+
+introduce :: Type -> TCTerm v a
+introduce a = let v = undefined in Lam a (Return v) -- `v` has to be introduced somewhere
+
+eval :: (Typechecker a) => TCTerm Int a -> a
+eval (Return t)    = t
+eval (Var i)       = var i
+eval (Lam a t)     = lam a (eval t)
+eval (App t1 t2)   = app (eval t1) (eval t2)
+eval (Have i a t)  = have i a (eval t)
+eval (HasType a t) = hasType a (eval t)
+eval Failure       = failure
