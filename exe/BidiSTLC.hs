@@ -1,17 +1,22 @@
-module STLC where
+module BidiSTLC where
 
-import Data.List (find)
+import GHC.TypeLits
+import qualified Data.Kind as Kind
 
 data Type = A | B | C | Fun Type Type
   deriving Eq
 
-class Typechecker a where
-  var :: Int -> a
-  lam :: Type -> a -> a
-  app :: a -> a -> a
-  have :: Int -> Type -> a -> a
-  hasType :: Type -> a -> a
-  failure :: a
+data Mode = SYN | CHK
+
+class Typechecker (v :: Nat) (a :: Mode -> Kind.Type)  where
+  var :: Nat -> a SYN
+  lam :: (Nat -> a CHK) -> a CHK
+  app :: a SYN -> a CHK -> a SYN
+  switch :: a SYN -> a CHK
+  ascribe :: Type -> a CHK -> a SYN
+  have :: Nat -> (Type -> a mode) -> a mode
+  goalIs :: (Type -> a mode) -> a mode
+  failure :: a mode
 
 data TCTerm v a = Return a
                 | Var v
@@ -53,7 +58,7 @@ assumption :: v -> TCTerm v a
 assumption v = Var v
 
 introduce :: Type -> TCTerm v a
-introduce a = let v = undefined in Lam a (Return v) -- `v` has to be introduced somewhere
+introduce a = Lam A (\v -> Return v)
 
 eval :: (Typechecker a) => TCTerm Int a -> a
 eval (Return t)    = t
@@ -63,11 +68,3 @@ eval (App t1 t2)   = app (eval t1) (eval t2)
 eval (Have i a t)  = have i a (eval t)
 eval (HasType a t) = hasType a (eval t)
 eval Failure       = failure
-
-instance Typechecker ([Type] -> Maybe Type) where
-  var i = \types -> Just (types !! i) -- I hate this
-  lam t f = \types -> f types >>= \t' -> Just (Fun t t')
-  app f e = undefined
-  have i t f = undefined
-  hasType t f = undefined
-  failure f = undefined

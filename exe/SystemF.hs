@@ -24,18 +24,21 @@ var i ctx = Just (ctx !! i)
 
 lam :: Type -> TypeChecker -> TypeChecker
 lam ty tc ctx = case tc (ty : ctx) of
-                  Just ty' -> Just (Fun ty ty')
+                  Just ty' -> Just (Arr ty ty')
                   Nothing  -> Nothing
 
 app :: TypeChecker -> TypeChecker -> TypeChecker
 app tc1 tc2 ctx = case (tc1 ctx, tc2 ctx) of
-                    (Just (Fun ty1 ty2), Just ty'1) | ty1 == ty'1 -> Just ty2
+                    (Just (Arr ty1 ty2), Just ty'1) | ty1 == ty'1 -> Just ty2
                     _ -> Nothing
 
 lamT :: Type -> TypeChecker -> TypeChecker
 lamT ty tc ctx = case tc (ty : ctx) of
-                  Just ty' -> Just (ForAll )
+                  Just ty' -> Just (ForAll undefined undefined)
                   Nothing  -> Nothing
+
+appT :: TypeChecker -> Type  -> TypeChecker
+appT = undefined
 
 failure :: TypeChecker
 failure _ = Nothing
