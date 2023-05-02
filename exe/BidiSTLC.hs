@@ -56,6 +56,3 @@ instance Monad (TCTerm v) where
 
 assumption :: v -> TCTerm v a
 assumption v = Var v
-
-introduce :: Type -> TCTerm v a
-introduce a = Lam A (\v -> Return v)
