@@ -59,12 +59,3 @@ assumption v = Var v
 
 introduce :: Type -> TCTerm v a
 introduce a = Lam A (\v -> Return v)
-
-eval :: (Typechecker a) => TCTerm Int a -> a
-eval (Return t)    = t
-eval (Var i)       = var i
-eval (Lam a t)     = lam a (eval t)
-eval (App t1 t2)   = app (eval t1) (eval t2)
-eval (Have i a t)  = have i a (eval t)
-eval (HasType a t) = hasType a (eval t)
-eval Failure       = failure
