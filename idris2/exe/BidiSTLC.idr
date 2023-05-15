@@ -56,3 +56,6 @@ Monad (TCTerm v) where
 
 assumption : v -> TCTerm v a
 assumption v = Var v
+
+introduction : (v -> TCTerm v a) -> TCTerm v a
+introduction f = Lam A (f 0)

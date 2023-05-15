@@ -1,7 +1,5 @@
 module STLC where
 
-import Data.List (find)
-
 data Type = A | B | C | Fun Type Type
   deriving Eq
 
@@ -55,7 +53,7 @@ assumption v = Var v
 introduce :: Type -> TCTerm v a
 introduce a = let v = undefined in Lam a (Return v) -- `v` has to be introduced somewhere
 
-eval :: (Typechecker a) => TCTerm Int a -> a
+eval :: Typechecker a => TCTerm Int a -> a
 eval (Return t)    = t
 eval (Var i)       = var i
 eval (Lam a t)     = lam a (eval t)
@@ -66,8 +64,41 @@ eval Failure       = failure
 
 instance Typechecker ([Type] -> Maybe Type) where
   var i = \types -> Just (types !! i) -- I hate this
-  lam t f = \types -> f types >>= \t' -> Just (Fun t t')
-  app f e = undefined
-  have i t f = undefined
-  hasType t f = undefined
-  failure f = undefined
+  lam ty f = \types -> case f (ty : types) of
+                        Just ty' -> Just (Fun ty ty')
+                        _        -> Nothing
+  app tm1 tm2 = \types -> case (tm1 types, tm2 types) of
+                          (Just (Fun t t'), Just ty) -> if t == ty then Just t' else Nothing
+                          _                          -> Nothing
+  have i t f = \types -> case types !! i == t of
+                          True  -> f types
+                          False -> Nothing
+  hasType t f = \types -> case f types of
+                            Just ty -> if ty == t then Just ty else Nothing
+                            _ -> Nothing
+  failure = \_ -> Nothing
+
+type Elab = [Type] -> Maybe (Type, TCTerm [Type] Type)
+
+instance Typechecker (Elab) where
+  var i = \types ->
+    let t = types !! i
+    in Just (t, Var [t])
+  lam ty f = \types ->
+    case f (ty : types) of
+      Just (ty', tm) -> Just (Fun ty ty', Lam ty tm)
+      _              -> Nothing
+  app tm1 tm2 = \types ->
+    case (tm1 types, tm2 types) of
+      (Just (Fun t t', tm'1), Just (ty, tm'2)) -> if t == ty then Just (t', App tm'1 tm'2) else Nothing
+      _                                      -> Nothing
+  have i t f = \types ->
+    case types !! i == t of
+      True  -> let Just (ty, tm) = f types
+               in Just (ty, Have i t tm)
+      False -> Nothing
+  hasType t f = \types ->
+    case f types of
+      Just (ty, tm) -> if ty == t then Just (ty, HasType ty tm) else Nothing
+      _ -> Nothing
+  failure = \_ -> Nothing
