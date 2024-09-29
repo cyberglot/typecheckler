@@ -1,22 +1,21 @@
 module BidiSTLC where
 
-import GHC.TypeLits
-import qualified Data.Kind as Kind
-
-data Type = A | B | C | Fun Type Type
-  deriving Eq
+import Control.Applicative ((<|>))
 
 data Mode = SYN | CHK
+  deriving Eq
 
-class Typechecker (v :: Nat) (a :: Mode -> Kind.Type)  where
-  var :: Nat -> a SYN
-  lam :: (Nat -> a CHK) -> a CHK
-  app :: a SYN -> a CHK -> a SYN
-  switch :: a SYN -> a CHK
-  ascribe :: Type -> a CHK -> a SYN
-  have :: Nat -> (Type -> a mode) -> a mode
-  goalIs :: (Type -> a mode) -> a mode
-  failure :: a mode
+data Type = K Mode | Fun Mode Type Type
+  deriving Eq
+
+class Typechecker a where
+  return :: a
+  var :: Int -> a
+  lam :: Type -> a -> a
+  app :: a -> a -> a
+  have :: Int -> Type -> a -> a
+  hasType :: Type -> a -> a
+  failure :: a
 
 data TCTerm v a = Return a
                 | Var v
@@ -27,6 +26,7 @@ data TCTerm v a = Return a
                 | Failure
 
 instance Functor (TCTerm v) where
+  fmap :: (a -> b) -> TCTerm v a -> TCTerm v b
   fmap f (Return a)     = Return $ f a
   fmap _ (Var i)        = Var i
   fmap f (Lam ty t)     = Lam ty (fmap f t)
@@ -36,7 +36,10 @@ instance Functor (TCTerm v) where
   fmap _ Failure        = Failure
 
 instance Applicative (TCTerm v) where
-  pure x = Return x
+  pure :: a -> TCTerm v a
+  pure = Return
+
+  (<*>) :: TCTerm v (a -> b) -> TCTerm v a -> TCTerm v b
   Return f     <*> a = fmap f a
   Var i        <*> _ = Var i
   Lam ty f     <*> a = Lam ty (f <*> a)
@@ -46,6 +49,7 @@ instance Applicative (TCTerm v) where
   Failure      <*> _ = Failure
 
 instance Monad (TCTerm v) where
+  (>>=) :: TCTerm v a -> (a -> TCTerm v b) -> TCTerm v b
   Return a     >>= f = f a
   Var i        >>= _ = Var i
   Lam ty t     >>= f = Lam ty (t >>= f)
@@ -55,4 +59,35 @@ instance Monad (TCTerm v) where
   Failure      >>= _ = Failure
 
 assumption :: v -> TCTerm v a
-assumption v = Var v
+assumption = Var
+
+introduce :: Type -> TCTerm v a
+introduce a = let v = undefined in Lam a (Return v) -- `v` has to be introduced somewhere
+
+instance Typechecker ([Type] -> Maybe Type) where
+  return :: [Type] -> Maybe Type
+  return _ = Nothing
+
+  var :: Int -> [Type] -> Maybe Type
+  var i ctx = if i < length ctx then Just (ctx !! i) else Nothing
+
+  lam :: Type -> ([Type] -> Maybe Type) -> [Type] -> Maybe Type
+  lam a f ctx = case f (a : ctx) of
+                  Just b -> Just (Fun SYN a b)
+                  Nothing -> Nothing
+
+  app :: ([Type] -> Maybe Type) -> ([Type] -> Maybe Type) -> [Type] -> Maybe Type
+  app tm1 tm2 types = case (tm1 types, tm2 types) of
+                          (Just (Fun SYN t t'), Just ty) -> if t == ty then Just t' else Nothing
+                          _                          -> Nothing
+
+  have :: Int -> Type -> ([Type] -> Maybe Type) -> [Type] -> Maybe Type
+  have i a t ctx = t ctx <|> Nothing
+
+  hasType :: Type -> ([Type] -> Maybe Type) -> [Type] -> Maybe Type
+  hasType a t ctx = case t ctx of
+                          Just b -> if a == b then Just a else Nothing
+                          Nothing -> Nothing
+
+  failure :: [Type] -> Maybe Type
+  failure _ = Nothing

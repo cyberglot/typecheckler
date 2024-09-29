@@ -31,8 +31,9 @@ instance Functor (TCTerm v) where
 
 instance Applicative (TCTerm v) where
   pure :: a -> TCTerm v a
-  (<*>) :: TCTerm v (a -> b) -> TCTerm v a -> TCTerm v b
   pure = Return
+
+  (<*>) :: TCTerm v (a -> b) -> TCTerm v a -> TCTerm v b
   Return f     <*> a = fmap f a
   Var i        <*> _ = Var i
   Lam ty f     <*> a = Lam ty (f <*> a)
