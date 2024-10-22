@@ -88,19 +88,19 @@ instance
   Typechecker.var TCTerm v ctxt = ctxt !! v
   Typechecker.lam TCTerm xtype check ctxt ftype = check (length ctxt + 1) (xtype ∷ ctxt) ftype
   Typechecker.app TCTerm synth check ctxt with synth ctxt
-  ...                                        | just (xtype => ftype) = check (xtype ∷ ctxt) ftype ~~> ftype
-  ...                                        | _                     = nothing
+  ...        | just (xtype => ftype) = check (xtype ∷ ctxt) ftype ~~> ftype
+  ...        | _                     = nothing
   Typechecker.switch TCTerm synth ctxt type with synth ctxt
-  ...                                        | just type₁ = type == type₁
-  ...                                        | _          = false
+  ...        | just type₁ = type == type₁
+  ...        | _          = false
   Typechecker.ascribe TCTerm type check ctxt = check ctxt type ~~> type
   Typechecker.have TCTerm {mode} v f with mode
-  ...                                   | chk = λ ctxt type ->  >| (ctxt !! v M.>>= λ type₁ -> just (f type ctxt type₁))
-  ...                                   | syn = λ ctxt -> ctxt !! v M.>>= λ type -> f type ctxt
+  ...        | chk = λ ctxt type ->  >| (ctxt !! v M.>>= λ type₁ -> just (f type ctxt type₁))
+  ...        | syn = λ ctxt -> ctxt !! v M.>>= λ type -> f type ctxt
   Typechecker.hasType TCTerm type-check ctxt type = type-check type ctxt type
   Typechecker.failure TCTerm {mode} with mode
-  ...                                  | chk = λ _ _ -> false
-  ...                                  | syn = λ _   -> nothing
+  ...        | chk = λ _ _ -> false
+  ...        | syn = λ _   -> nothing
 
 Elab : Mode -> Set₁
 Elab chk = List Type -> Type -> Maybe (Term (List Type) syn (λ mode -> Type))
@@ -111,23 +111,23 @@ instance
   Typechecker.var ElabTerm v ctxt = ctxt !! v M.>>= λ type -> just (type , Var ctxt)
   Typechecker.lam ElabTerm xtype check ctxt ftype = check (length ctxt + 1) (xtype ∷ ctxt) ftype
   Typechecker.app ElabTerm synth check ctxt with synth ctxt
-  ...                                          | just (xtype => ftype , term) with check (xtype ∷ ctxt) ftype
-  ...                                                                            | just term₁ = just (ftype , term₁)
-  ...                                                                            | _          = nothing
+  ...        | just (xtype => ftype , term) with check (xtype ∷ ctxt) ftype
+  ...        | just term₁ = just (ftype , term₁)
+  ...        | _          = nothing
   Typechecker.app ElabTerm synth check ctxt    | _          = nothing
   Typechecker.switch ElabTerm synth ctxt type with synth ctxt
-  ...                                            | just (type₁ , term) = if type == type₁ then just term else nothing
-  ...                                            | _          = nothing
+  ...        | just (type₁ , term) = if type == type₁ then just term else nothing
+  ...        | _          = nothing
   Typechecker.ascribe ElabTerm type check ctxt with check ctxt type
-  ...                                        | just t = just ( type , t )
-  ...                                        | nothing = nothing
+  ...        | just t = just ( type , t )
+  ...        | nothing = nothing
   Typechecker.have ElabTerm {mode} v f with mode
-  ...                                   | chk = λ ctxt type ->  ctxt !! v M.>>= λ type₁ -> f type ctxt type₁
-  ...                                   | syn = λ ctxt -> ctxt !! v M.>>= λ type -> f type ctxt
+  ...        | chk = λ ctxt type ->  ctxt !! v M.>>= λ type₁ -> f type ctxt type₁
+  ...        | syn = λ ctxt -> ctxt !! v M.>>= λ type -> f type ctxt
   Typechecker.hasType ElabTerm type-check ctxt type = type-check type ctxt type
   Typechecker.failure ElabTerm {mode} with mode
-  ...                                  | chk = λ _ _ -> nothing
-  ...                                  | syn = λ _   -> nothing
+  ...        | chk = λ _ _ -> nothing
+  ...        | syn = λ _   -> nothing
 
 assumption : {v : Set} -> {m : Mode} ->  v -> Term v m (λ _ -> Empty)
 assumption v = Var v
