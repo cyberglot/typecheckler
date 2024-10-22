@@ -24,3 +24,6 @@ cabal.project.local~
 
 *.ttc
 *.ttm
+
+*.agdai
+MAlonzo/**
