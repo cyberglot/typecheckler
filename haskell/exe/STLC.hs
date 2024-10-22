@@ -109,7 +109,7 @@ instance Typechecker Elab where
   app tm1 tm2 types =
     case (tm1 types, tm2 types) of
       (Just (Fun t t', tm'1), Just (ty, tm'2)) -> if t == ty then Just (t', App tm'1 tm'2) else Nothing
-      _                                      -> Nothing
+      _                                        -> Nothing
 
   have :: Int -> Type -> Elab -> Elab
   have i t f types =

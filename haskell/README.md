@@ -1,2 +1,2 @@
 # typecheckler
-algebraic typechecking and elaboration of dependent types
+algebraic typechecking and elaboration of type systems
